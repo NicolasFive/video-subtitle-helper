@@ -8,6 +8,7 @@ from subtitle import SSAConverter
 from utils import create_tempdir, modify_separator
 import os
 from embed import SubtitleEmbed
+from s3 import S3Operator
 
 app = FastAPI(title="音频转录与字幕嵌入API")
 
@@ -42,21 +43,18 @@ async def transcribe_api(request: TranscribeRequest):
         api_key = "442e2d408ee948a8bd078066a493ac05"  # 建议改为环境变量
         trans = Transcriber(api_key)
         transcript = trans.exec(request.audio_path)
-        
+
         # 确保返回的是可序列化的数据
         result = transcript.json_response
-            
-        return {
-            "status": "success",
-            "data": result
-        }
+
+        return {"status": "success", "data": result}
     except Exception as e:
         # 返回详细的错误信息
         error_info = {
             "status": "error",
             "error_type": type(e).__name__,
             "error_message": str(e),
-            "traceback": traceback.format_exc()
+            "traceback": traceback.format_exc(),
         }
         raise HTTPException(status_code=500, detail=error_info)
 
@@ -70,39 +68,45 @@ async def embed_subtitle_api(request: EmbedSubtitleRequest):
         video_path: 视频文件路径或URL
     """
     try:
-        output_path = "./output.mp4"
         # 将Pydantic模型转换为字典列表
         subtitle_data_list = []
         for item in request.subtitle_data:
             item_dict = item.model_dump(by_alias=True)  # 使用别名转换
             print(item_dict)
             subtitle_data_list.append(item_dict)
-        
+
         # 创建临时目录并生成字幕文件
         converter = SSAConverter()
         temp_dir = create_tempdir()
         subtitle_path = os.path.join(temp_dir, "styled_subtitles.ssa")
-        
+
         # 转换字幕数据
         converter.convert(subtitle_data_list, subtitle_path)
-        
+
         # 嵌入字幕
+        output_path = os.path.join(temp_dir, "output.mp4")
         embeder = SubtitleEmbed()
         subtitle_path = modify_separator(subtitle_path)
         embeder.embed(request.video_path, subtitle_path, output_path)
-        
-        return {
-            "status": "success",
-            "message": "字幕嵌入完成",
-            "output_path": output_path
-        }
+
+        # 上传输出视频到对象存储
+        s3_oper = S3Operator(
+            endpoint="https://cn-nb1.rains3.com",
+            access_key="6PZZwXqeL1dCdtqh",
+            secret_key="uun5qw9oSmwkc1OhLfcBV2f3DhNseD",
+            bucket="coze-project",
+        )
+        object_key = modify_separator(output_path[2:])
+        output_link = s3_oper.upload(object_key, output_path)
+
+        return {"status": "success", "message": "字幕嵌入完成", "output": output_link}
     except Exception as e:
         # 返回详细的错误信息
         error_info = {
             "status": "error",
             "error_type": type(e).__name__,
             "error_message": str(e),
-            "traceback": traceback.format_exc()
+            "traceback": traceback.format_exc(),
         }
         raise HTTPException(status_code=500, detail=error_info)
 
@@ -110,29 +114,22 @@ async def embed_subtitle_api(request: EmbedSubtitleRequest):
 if __name__ == "__main__":
     import uvicorn
     import argparse
-    
+
     # 创建命令行参数解析器
     parser = argparse.ArgumentParser(description="音频转录与字幕嵌入API")
     parser.add_argument(
-        "-p", "--port",
-        type=int, 
-        default=8000, 
-        help="服务器端口号 (默认: 8000)"
+        "-p", "--port", type=int, default=8000, help="服务器端口号 (默认: 8000)"
     )
     parser.add_argument(
-        "-H", "--host",
-        type=str, 
-        default="0.0.0.0", 
-        help="服务器主机地址 (默认: 0.0.0.0)"
+        "-H",
+        "--host",
+        type=str,
+        default="0.0.0.0",
+        help="服务器主机地址 (默认: 0.0.0.0)",
     )
-    
+
     # 解析命令行参数
     args = parser.parse_args()
-    
+
     # 启动服务器
-    uvicorn.run(
-        app, 
-        host=args.host, 
-        port=args.port,
-        log_level="info"
-    )
+    uvicorn.run(app, host=args.host, port=args.port, log_level="info")
