@@ -5,7 +5,7 @@ import traceback
 import json
 from trans import Transcriber
 from subtitle import SSAConverter
-from utils import create_tempdir, modify_separator
+from utils import create_tempdir, modify_separator, split_sentence_by_dot
 import os
 from embed import SubtitleEmbed
 from s3 import S3Operator
@@ -46,6 +46,9 @@ async def transcribe_api(request: TranscribeRequest):
 
         # 确保返回的是可序列化的数据
         result = transcript.json_response
+        utterances = result.get("utterances", [])
+        utterances = [s for u in utterances for s in split_sentence_by_dot(u)]
+        result["utterances"] = utterances
 
         return {"status": "success", "data": result}
     except Exception as e:
