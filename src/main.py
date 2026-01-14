@@ -120,7 +120,7 @@ if __name__ == "__main__":
         help="服务器端口号 (默认: 8000)"
     )
     parser.add_argument(
-        "-h", "--host",
+        "-H", "--host",
         type=str, 
         default="0.0.0.0", 
         help="服务器主机地址 (默认: 0.0.0.0)"
