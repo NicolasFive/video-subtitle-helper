@@ -55,7 +55,7 @@ PlayResY: 288
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, TertiaryColour, BackColour, Bold, Italic, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, AlphaLevel, Encoding
-Style: {self.default_style},{self.default_font},{self.default_font_size},&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,1,2,2,2,30,30,10,0,1
+Style: {self.default_style},{self.default_font},{self.default_font_size},&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,1,2,2,2,100,100,10,0,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
