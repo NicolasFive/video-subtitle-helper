@@ -50,9 +50,6 @@ def split_sentence_by_dot(json_response):
     speaker = json_response.get("speaker", "")
     words = json_response.get("words", [])
     confidence = json_response.get("confidence", 0)
-    print(text)
-    print(words)
-    print(speaker)
     # 分割并保留分隔符
     parts = re.split(r"([.!?。！？])", text)
 
