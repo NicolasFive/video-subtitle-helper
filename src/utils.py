@@ -51,7 +51,8 @@ def split_sentence_by_dot(json_response):
     words = json_response.get("words", [])
     confidence = json_response.get("confidence", 0)
     # 分割并保留分隔符
-    parts = re.split(r"([.!?。！？])", text)
+    pattern = r'(?<!\d\.)(?<!\d)(?<![A-Za-z]\.)([,.!?。！？]+)\s*'
+    parts = re.split(pattern, text)
 
     # 组合句子
     sentences = []
