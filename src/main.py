@@ -4,8 +4,7 @@ from typing import List, Optional
 import traceback
 import json
 from trans import Transcriber
-from subtitle import SSAConverter
-from utils import create_tempdir, modify_separator, split_sentence_by_dot
+from utils import create_tempdir, modify_separator, split_sentence_by_dot, download_file
 import os
 from embed import SubtitleEmbed
 from s3 import S3Operator
@@ -15,7 +14,7 @@ app = FastAPI(title="音频转录与字幕嵌入API")
 
 # 数据模型定义
 class TranscribeRequest(BaseModel):
-    audio_path: str
+    video_path: str
 
 
 class SubtitleData(BaseModel):
@@ -36,13 +35,13 @@ async def transcribe_api(request: TranscribeRequest):
     """
     音频转录API
     参数:
-        audio_path: 音频文件路径或URL
+        video_path: 音频文件路径或URL
     """
     try:
         # 这里应该从环境变量或配置中获取API密钥
         api_key = "442e2d408ee948a8bd078066a493ac05"  # 建议改为环境变量
         trans = Transcriber(api_key)
-        transcript = trans.exec(request.audio_path)
+        transcript = trans.exec(request.video_path)
 
         # 确保返回的是可序列化的数据
         result = transcript.json_response
@@ -72,25 +71,13 @@ async def embed_subtitle_api(request: EmbedSubtitleRequest):
     """
     try:
         # 将Pydantic模型转换为字典列表
-        subtitle_data_list = []
+        subtitle_data = []
         for item in request.subtitle_data:
             item_dict = item.model_dump(by_alias=True)  # 使用别名转换
-            print(item_dict)
-            subtitle_data_list.append(item_dict)
+            subtitle_data.append(item_dict)
 
-        # 创建临时目录并生成字幕文件
-        converter = SSAConverter()
-        temp_dir = create_tempdir()
-        subtitle_path = os.path.join(temp_dir, "styled_subtitles.ssa")
-
-        # 转换字幕数据
-        converter.convert(subtitle_data_list, subtitle_path)
-
-        # 嵌入字幕
-        output_path = os.path.join(temp_dir, "output.mp4")
         embeder = SubtitleEmbed()
-        subtitle_path = modify_separator(subtitle_path)
-        embeder.embed(request.video_path, subtitle_path, output_path)
+        output_path = embeder.embed(request.video_path, subtitle_data)
 
         # 上传输出视频到对象存储
         s3_oper = S3Operator(
