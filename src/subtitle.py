@@ -162,6 +162,8 @@ def handle_oversize_sentences(json_data, video_width, base_font_size):
                 copied["start"] = chunks_steps[idx][0]
                 copied["end"] = chunks_steps[idx+len(arr)-1][1]
                 handled_json_data.append(copied)
+        elif len(text)<=chunk_size+1:
+            handled_json_data.append(item)
         else:
             text = r"\n".join(chunks)
             item["text"] = text
